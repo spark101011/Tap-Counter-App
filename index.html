@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Tools</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#060b10">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+  :root {
+    --bg-0: #060b10;
+    --bg-1: #0a141d;
+    --glass: rgba(255,255,255,0.055);
+    --glass-hi: rgba(255,255,255,0.09);
+    --glass-border: rgba(148,197,190,0.16);
+    --glass-border-strong: rgba(148,197,190,0.28);
+    --blue: #4fb4ff;
+    --blue-soft: #2e6fa8;
+    --green: #3ddc97;
+    --green-soft: #1f9e6f;
+    --text: #eaf3f2;
+    --text-dim: #93a8ac;
+    --text-faint: #64787c;
+    --danger: #ff6b6b;
+    --danger-soft: rgba(255,107,107,0.16);
+    --warn: #f5b95c;
+    --shadow: 0 8px 32px rgba(0,0,0,0.45);
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg-0); }
+  body {
+    margin: 0;
+    padding: 22px 16px 110px;
+    background:
+      radial-gradient(720px 480px at 8% -6%, rgba(61,220,151,0.16), transparent 60%),
+      radial-gradient(760px 520px at 96% 8%, rgba(79,180,255,0.14), transparent 55%),
+      radial-gradient(900px 700px at 50% 110%, rgba(45,120,150,0.10), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1) 60%, var(--bg-0));
+    background-attachment: fixed;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { text-align: center; font-size: 21px; margin-bottom: 20px; font-weight: 650; letter-spacing: 0.2px; color: var(--text); }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* --- Glass panel base, applied to every card-like surface --- */
+  .card, .group, #rawDataPanel, #best, #historyPanel, .session-card,
+  .bt-card, .bt-edit-panel, .bt-hyp-card, .bt-compare-col, .bt-metric-box,
+  #page-home .menu-btn {
+    background: linear-gradient(160deg, var(--glass-hi), var(--glass));
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  /* --- Home menu --- */
+  #page-home .menu-btn {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto 16px;
+    padding: 22px;
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: var(--radius);
+    text-align: left;
+    color: var(--text);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  #page-home .menu-btn:active { transform: scale(0.98); border-color: var(--glass-border-strong); }
+  #page-home .menu-btn .sub { display: block; font-size: 13px; font-weight: normal; color: var(--text-dim); margin-top: 4px; }
+
+  /* --- Top nav on each tool page --- */
+  .toolnav { max-width: 460px; margin: 0 auto 16px; display: flex; align-items: center; gap: 10px; }
+  .home-btn { border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text); border-radius: 10px; padding: 8px 12px; font-size: 14px; white-space: nowrap; backdrop-filter: blur(10px); }
+  .toolnav h1 { margin: 0; font-size: 18px; flex: 1; }
+
+  /* --- Shared bits --- */
+  #list { display: flex; flex-direction: column; gap: 14px; max-width: 420px; margin: 0 auto; }
+  .topbar { max-width: 420px; margin: 0 auto 16px; display: flex; gap: 8px; }
+  #search { flex: 1; padding: 10px 12px; font-size: 15px; border: 1px solid var(--glass-border); border-radius: 10px; background: rgba(255,255,255,0.05); color: var(--text); }
+  #search::placeholder { color: var(--text-faint); }
+  #exportBtn, #rawDataBtn { padding: 10px 14px; font-size: 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--blue-soft), var(--blue)); color: #04121a; font-weight: 600; white-space: nowrap; }
+  .add-row { max-width: 420px; margin: 0 auto 16px; display: flex; gap: 8px; }
+  #newName { flex: 1; padding: 10px 12px; font-size: 15px; border: 1px solid var(--glass-border); border-radius: 10px; background: rgba(255,255,255,0.05); color: var(--text); }
+  #confirmAddBtn { padding: 10px 16px; font-size: 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--green-soft), var(--green)); color: #052015; font-weight: 700; }
+  .label-input { font-size: 18px; font-weight: 600; flex: 1; border: none; border-bottom: 2px solid var(--glass-border); background: transparent; padding: 2px 0; min-width: 0; color: var(--text); }
+  .card { border-radius: var(--radius); padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; }
+  .label { font-size: 18px; font-weight: 600; flex: 1; word-break: break-word; color: var(--text); }
+  .count { font-size: 34px; font-weight: bold; min-width: 60px; text-align: center; user-select: none; color: var(--blue); }
+  .actions { display: flex; flex-direction: column; gap: 6px; margin-left: 10px; }
+  .actions button { border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--text-dim); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+  .count-group { display: flex; align-items: center; gap: 8px; }
+  .minus-btn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--glass-border-strong); background: rgba(255,255,255,0.06); font-size: 20px; line-height: 1; color: var(--text-dim); }
+  #rawDataPanel { display: none; max-width: 420px; margin: 0 auto 100px; border-radius: var(--radius); padding: 16px; }
+  #rawDataPanel table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  #rawDataPanel th, #rawDataPanel td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--glass-border); color: var(--text-dim); }
+  #rawDataPanel h2 { font-size: 16px; margin: 14px 0 4px; color: var(--text); }
+
+  /* --- Odds tracker specific --- */
+  .subtitle { text-align: center; color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
+  .bar-row { max-width: 460px; margin: 0 auto 12px; display: flex; gap: 8px; }
+  .btn { border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; color: #04141c; font-weight: 600; white-space: nowrap; }
+  .btn-add { background: linear-gradient(135deg, var(--blue-soft), var(--blue)); }
+  .btn-save { background: linear-gradient(135deg, var(--green-soft), var(--green)); }
+  .btn-history { background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid var(--glass-border); flex: 1; }
+  #best { max-width: 460px; margin: 0 auto 16px; border-radius: 14px; padding: 10px 14px; text-align: center; font-weight: 600; font-size: 14px; border-color: rgba(245,185,92,0.35); color: var(--warn); }
+  #groups { display: flex; flex-direction: column; gap: 12px; max-width: 460px; margin: 0 auto; }
+  .group { border-radius: var(--radius); padding: 14px 16px; }
+  .group-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+  .group-title { font-size: 18px; font-weight: bold; border: none; border-bottom: 2px solid var(--glass-border); background: transparent; flex: 1; min-width: 0; padding: 2px 0; color: var(--text); }
+  .winrate { font-size: 16px; font-weight: bold; white-space: nowrap; color: var(--green); }
+  .stats { font-size: 13px; color: var(--text-dim); }
+  .taps { display: flex; gap: 10px; margin-top: 10px; }
+  .tap-btn { flex: 1; padding: 14px 0; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; color: #04141c; }
+  .win-btn { background: linear-gradient(135deg, var(--green-soft), var(--green)); }
+  .loss-btn { background: linear-gradient(135deg, #a83f3f, var(--danger)); color: #1a0505; }
+  .bottom-row { display: flex; gap: 8px; margin-top: 8px; }
+  .undo-btn, .del-btn { flex: 1; padding: 6px; font-size: 12px; border: 1px solid var(--glass-border); border-radius: 8px; background: rgba(255,255,255,0.05); color: var(--text-dim); }
+  #historyPanel { display: none; max-width: 460px; margin: 18px auto 0; border-radius: var(--radius); padding: 14px; }
+  #historyPanel h2 { font-size: 16px; margin: 0 0 10px; color: var(--text); }
+  .session-card { border-radius: 12px; padding: 10px; margin-bottom: 10px; font-size: 13px; border: 1px solid var(--glass-border); }
+  .session-card table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .session-card th, .session-card td { text-align: left; padding: 2px 4px; color: var(--text-dim); }
+  .del-session { background: rgba(255,107,107,0.14); color: var(--danger); border: 1px solid rgba(255,107,107,0.3); border-radius: 6px; padding: 3px 8px; font-size: 11px; float: right; }
+
+  /* --- Backtest Research module --- */
+  #btApp { max-width: 460px; margin: 0 auto; }
+  .bt-card { border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+  .bt-card h3 { margin: 0 0 8px; font-size: 17px; color: var(--text); font-weight: 650; }
+  .bt-card .meta { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+  .bt-row-btns { display: flex; gap: 8px; margin-top: 8px; }
+  .bt-row-btns button { flex: 1; padding: 8px; font-size: 13px; border: 1px solid var(--glass-border); border-radius: 8px; background: rgba(255,255,255,0.06); color: var(--text); }
+  .bt-btn-primary { background: linear-gradient(135deg, var(--blue-soft), var(--blue)) !important; border: none !important; color: #04141c !important; font-weight: 700; }
+  .bt-btn-danger { background: linear-gradient(135deg, #a83f3f, var(--danger)) !important; border: none !important; color: #1a0505 !important; font-weight: 700; }
+  .bt-input, .bt-select, .bt-textarea {
+    width: 100%; padding: 9px 10px; font-size: 14px; border: 1px solid var(--glass-border);
+    border-radius: 10px; margin-bottom: 8px; background: rgba(255,255,255,0.05); color: var(--text);
+  }
+  .bt-input::placeholder, .bt-textarea::placeholder { color: var(--text-faint); }
+  .bt-select { color-scheme: dark; }
+  .bt-textarea { min-height: 60px; resize: vertical; }
+  .bt-field-label { font-size: 12px; font-weight: 600; color: var(--text-dim); margin: 6px 0 2px; display: block; letter-spacing: 0.2px; }
+  .bt-pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .bt-pill { border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 20px; padding: 6px 12px; font-size: 12px; }
+  .bt-pill.on { background: linear-gradient(135deg, var(--green-soft), var(--blue-soft)); color: #eaf9f4; border-color: transparent; }
+  .bt-tab-row { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; }
+  .bt-tab { flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: 10px; background: rgba(255,255,255,0.05); color: var(--text-dim); font-size: 12px; white-space: nowrap; }
+  .bt-tab.on { background: linear-gradient(135deg, var(--blue-soft), var(--blue)); color: #04141c; border-color: transparent; font-weight: 700; }
+  .bt-frozen-badge { display: inline-block; background: linear-gradient(135deg, #d99a3d, var(--warn)); color: #2a1a02; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+  .bt-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .bt-metric-box { border-radius: 12px; padding: 10px; text-align: center; }
+  .bt-metric-box .v { font-size: 18px; font-weight: bold; color: var(--text); }
+  .bt-metric-box .l { font-size: 11px; color: var(--text-dim); }
+  .bt-trade-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--glass-border); font-size: 13px; color: var(--text); }
+  .bt-trade-row .r-pos { color: var(--green); font-weight: bold; }
+  .bt-trade-row .r-neg { color: var(--danger); font-weight: bold; }
+  .bt-trade-row .r-zero { color: var(--text-faint); font-weight: bold; }
+  .bt-edit-panel { border-radius: 12px; padding: 10px; margin-top: 6px; }
+  .bt-seq { font-family: ui-monospace, "SF Mono", monospace; font-size: 13px; word-break: break-all; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); padding: 8px; border-radius: 8px; color: var(--text-dim); }
+  .bt-warn { background: rgba(245,185,92,0.10); border: 1px solid rgba(245,185,92,0.35); border-radius: 10px; padding: 10px; font-size: 13px; margin-bottom: 10px; color: var(--warn); }
+  .bt-note { font-size: 12px; color: var(--text-dim); margin: 4px 0 10px; }
+  .bt-compare-cols { display: flex; gap: 10px; }
+  .bt-compare-col { border-radius: 12px; padding: 10px; }
+  .bt-compare-col h4 { margin: 0 0 8px; font-size: 13px; text-align: center; color: var(--text); }
+  .bt-compare-col .m { font-size: 12px; display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--glass-border); color: var(--text-dim); }
+  .bt-hyp-card { border-radius: 12px; padding: 10px; margin-bottom: 8px; font-size: 13px; }
+  .bt-hyp-status { display: inline-block; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 10px; background: rgba(79,180,255,0.16); color: var(--blue); }
+</style>
+
+</head>
+<body>
+
+  <!-- HOME MENU -->
+  <div id="page-home" class="page active">
+    <h1>Data Tools</h1>
+    <button class="menu-btn" onclick="showPage('counters')">
+      Tap Counters
+      <span class="sub">Count how often things appear, with timestamps</span>
+    </button>
+    <button class="menu-btn" onclick="showPage('odds')">
+      Odds Win-Rate Tracker
+      <span class="sub">Track win/loss per odds bar, backtest strategies</span>
+    </button>
+    <button class="menu-btn" onclick="showPage('backtest')">
+      Backtest Research
+      <span class="sub">Strategy versions, rulebook, trade log, expectancy, equity curve</span>
+    </button>
+  </div>
+
+  <!-- TAP COUNTERS PAGE -->
+  <div id="page-counters" class="page">
+    <div class="toolnav">
+      <button class="home-btn" onclick="showPage('home')">☰ Menu</button>
+      <h1>Tap Counters</h1>
+    </div>
+    <div class="topbar">
+      <input id="search" type="text" placeholder="Search..." oninput="counter_render()">
+      <button id="exportBtn" onclick="counter_exportData()">Export CSV</button>
+      <button id="rawDataBtn" onclick="counter_toggleRawData()">Raw Data</button>
+    </div>
+    <div class="add-row">
+      <input id="newName" type="text" placeholder="New counter name (e.g. Maestro)" onkeydown="if(event.key==='Enter') counter_addBox()">
+      <button id="confirmAddBtn" onclick="counter_addBox()">Add</button>
+    </div>
+    <div id="rawDataPanel"></div>
+    <div id="list"></div>
+  </div>
+
+  <!-- ODDS TRACKER PAGE -->
+  <div id="page-odds" class="page">
+    <div class="toolnav">
+      <button class="home-btn" onclick="showPage('home')">☰ Menu</button>
+      <h1>Odds Win-Rate Tracker</h1>
+    </div>
+    <div class="subtitle">Add your own bars, tap Win or Loss as results come in</div>
+    <div class="bar-row">
+      <input id="newBarName" type="text" placeholder="New bar name (e.g. 3:1)" onkeydown="if(event.key==='Enter') odds_addBar()">
+      <button class="btn btn-add" onclick="odds_addBar()">Add Bar</button>
+    </div>
+    <div class="bar-row">
+      <input id="sessionName" type="text" placeholder="Current strategy name (optional)">
+      <button class="btn btn-save" onclick="odds_saveAndReset()">Save & New</button>
+    </div>
+    <div class="bar-row">
+      <button class="btn btn-history" onclick="odds_toggleHistory()">View Saved Sessions</button>
+    </div>
+    <div id="best"></div>
+    <div id="groups"></div>
+    <div id="historyPanel"></div>
+  </div>
+
+  <!-- BACKTEST RESEARCH PAGE -->
+  <div id="page-backtest" class="page">
+    <div class="toolnav">
+      <button class="home-btn" onclick="showPage('home')">☰ Menu</button>
+      <h1 id="btTitle">Backtest Research</h1>
+    </div>
+    <div id="btApp"></div>
+  </div>
+
+<script>
+  // ============ NAVIGATION ============
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    if (name === 'counters') counter_render();
+    if (name === 'odds') odds_render();
+    if (name === 'backtest') bt_render();
+  }
+
+  // ============ TAP COUNTERS ============
+  let boxes = JSON.parse(localStorage.getItem('tapCounters') || '[]');
+  if (boxes.length === 0) {
+    boxes = [{ label: "Example", count: 0, timestamps: [] }];
+  }
+  boxes.forEach(b => { if (!b.timestamps) b.timestamps = []; });
+
+  function counter_save() {
+    localStorage.setItem('tapCounters', JSON.stringify(boxes));
+  }
+
+  function counter_render() {
+    const list = document.getElementById('list');
+    const query = document.getElementById('search').value.trim().toLowerCase();
+    list.innerHTML = '';
+    boxes.forEach((box, i) => {
+      if (query && !box.label.toLowerCase().includes(query)) return;
+
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      const label = document.createElement('input');
+      label.className = 'label-input';
+      label.type = 'text';
+      label.value = box.label;
+      label.onchange = () => {
+        if (label.value.trim()) { box.label = label.value.trim(); counter_save(); }
+        else label.value = box.label;
+      };
+
+      const countGroup = document.createElement('div');
+      countGroup.className = 'count-group';
+
+      const minusBtn = document.createElement('button');
+      minusBtn.className = 'minus-btn';
+      minusBtn.textContent = '−';
+      minusBtn.onclick = () => {
+        if (box.count > 0) { box.count--; box.timestamps.pop(); counter_save(); counter_render(); }
+      };
+
+      const count = document.createElement('div');
+      count.className = 'count';
+      count.textContent = box.count;
+      count.onclick = () => {
+        box.count++; box.timestamps.push(new Date().toISOString());
+        counter_save(); counter_render();
+      };
+
+      countGroup.appendChild(minusBtn);
+      countGroup.appendChild(count);
+
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+
+      const resetBtn = document.createElement('button');
+      resetBtn.textContent = 'Reset';
+      resetBtn.onclick = () => { box.count = 0; box.timestamps = []; counter_save(); counter_render(); };
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Delete';
+      delBtn.onclick = () => { boxes.splice(i, 1); counter_save(); counter_render(); };
+
+      actions.appendChild(resetBtn);
+      actions.appendChild(delBtn);
+
+      card.appendChild(label);
+      card.appendChild(countGroup);
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+    if (document.getElementById('rawDataPanel').style.display === 'block') counter_renderRawData();
+  }
+
+  function counter_addBox() {
+    const input = document.getElementById('newName');
+    const name = input.value.trim();
+    if (name) {
+      boxes.push({ label: name, count: 0, timestamps: [] });
+      counter_save(); input.value = ''; counter_render();
+    }
+  }
+
+  function counter_exportData() {
+    let rows = [['label', 'timestamp']];
+    boxes.forEach(box => {
+      if (box.timestamps.length === 0) rows.push([box.label, '']);
+      else box.timestamps.forEach(ts => rows.push([box.label, ts]));
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tap-counters-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function counter_toggleRawData() {
+    const panel = document.getElementById('rawDataPanel');
+    panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+    if (panel.style.display === 'block') counter_renderRawData();
+  }
+
+  function counter_renderRawData() {
+    const panel = document.getElementById('rawDataPanel');
+    let rows = [];
+    boxes.forEach(box => box.timestamps.forEach(ts => rows.push({ label: box.label, ts })));
+    rows.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+    let html = '<h2>Summary (totals per counter)</h2><table><tr><th>Counter</th><th>Total taps</th></tr>';
+    boxes.forEach(box => { html += `<tr><td>${box.label}</td><td>${box.count}</td></tr>`; });
+    html += '</table>';
+
+    html += '<h2>Raw log (every tap, newest first)</h2>';
+    if (rows.length === 0) {
+      html += '<p>No taps recorded yet.</p>';
+    } else {
+      html += '<table><tr><th>Counter</th><th>Time</th></tr>';
+      rows.forEach(r => { html += `<tr><td>${r.label}</td><td>${new Date(r.ts).toLocaleString()}</td></tr>`; });
+      html += '</table>';
+    }
+    panel.innerHTML = html;
+  }
+
+  // ============ ODDS TRACKER ============
+  function odds_defaultBars() {
+    return [
+      { label: "4:1", wins: 0, losses: 0, lastAction: null },
+      { label: "8:1", wins: 0, losses: 0, lastAction: null }
+    ];
+  }
+
+  let odds_current = JSON.parse(localStorage.getItem('oddsCurrentBars') || 'null') || odds_defaultBars();
+  let odds_history = JSON.parse(localStorage.getItem('oddsHistory') || '[]');
+
+  function odds_saveCurrent() { localStorage.setItem('oddsCurrentBars', JSON.stringify(odds_current)); }
+  function odds_saveHistory() { localStorage.setItem('oddsHistory', JSON.stringify(odds_history)); }
+
+  function odds_winRate(g) {
+    const total = g.wins + g.losses;
+    return total === 0 ? null : (g.wins / total * 100);
+  }
+
+  function odds_addBar() {
+    const input = document.getElementById('newBarName');
+    const name = input.value.trim();
+    if (name) {
+      odds_current.push({ label: name, wins: 0, losses: 0, lastAction: null });
+      odds_saveCurrent(); input.value = ''; odds_render();
+    }
+  }
+
+  function odds_render() {
+    const container = document.getElementById('groups');
+    container.innerHTML = '';
+
+    let best = null;
+    odds_current.forEach(g => {
+      const wr = odds_winRate(g);
+      if (wr !== null && (best === null || wr > best.wr)) best = { label: g.label, wr };
+    });
+    document.getElementById('best').textContent = best
+      ? `Best so far: ${best.label} at ${best.wr.toFixed(1)}% win rate`
+      : `No results yet — start tapping`;
+
+    odds_current.forEach((g, i) => {
+      const wr = odds_winRate(g);
+
+      const card = document.createElement('div');
+      card.className = 'group';
+
+      const top = document.createElement('div');
+      top.className = 'group-top';
+
+      const labelInput = document.createElement('input');
+      labelInput.className = 'group-title';
+      labelInput.type = 'text';
+      labelInput.value = g.label;
+      labelInput.onchange = () => {
+        if (labelInput.value.trim()) { g.label = labelInput.value.trim(); odds_saveCurrent(); }
+        else labelInput.value = g.label;
+      };
+
+      const wrDiv = document.createElement('div');
+      wrDiv.className = 'winrate';
+      wrDiv.textContent = wr === null ? '—' : wr.toFixed(1) + '%';
+
+      top.appendChild(labelInput);
+      top.appendChild(wrDiv);
+
+      const stats = document.createElement('div');
+      stats.className = 'stats';
+      stats.textContent = `${g.wins} win${g.wins!==1?'s':''} \u00b7 ${g.losses} loss${g.losses!==1?'es':''} \u00b7 ${g.wins+g.losses} total`;
+
+      const taps = document.createElement('div');
+      taps.className = 'taps';
+
+      const winBtn = document.createElement('button');
+      winBtn.className = 'tap-btn win-btn';
+      winBtn.textContent = 'WIN';
+      winBtn.onclick = () => { g.wins++; g.lastAction='win'; odds_saveCurrent(); odds_render(); };
+
+      const lossBtn = document.createElement('button');
+      lossBtn.className = 'tap-btn loss-btn';
+      lossBtn.textContent = 'LOSS';
+      lossBtn.onclick = () => { g.losses++; g.lastAction='loss'; odds_saveCurrent(); odds_render(); };
+
+      taps.appendChild(winBtn);
+      taps.appendChild(lossBtn);
+
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'bottom-row';
+
+      const undoBtn = document.createElement('button');
+      undoBtn.className = 'undo-btn';
+      undoBtn.textContent = 'Undo last tap';
+      undoBtn.onclick = () => {
+        if (g.lastAction === 'win' && g.wins > 0) g.wins--;
+        if (g.lastAction === 'loss' && g.losses > 0) g.losses--;
+        g.lastAction = null;
+        odds_saveCurrent(); odds_render();
+      };
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del-btn';
+      delBtn.textContent = 'Delete bar';
+      delBtn.onclick = () => { odds_current.splice(i, 1); odds_saveCurrent(); odds_render(); };
+
+      bottomRow.appendChild(undoBtn);
+      bottomRow.appendChild(delBtn);
+
+      card.appendChild(top);
+      card.appendChild(stats);
+      card.appendChild(taps);
+      card.appendChild(bottomRow);
+      container.appendChild(card);
+    });
+
+    if (document.getElementById('historyPanel').style.display === 'block') odds_renderHistory();
+  }
+
+  function odds_saveAndReset() {
+    const totalTaps = odds_current.reduce((sum, g) => sum + g.wins + g.losses, 0);
+    if (totalTaps === 0) { alert('No taps recorded yet — nothing to save.'); return; }
+    const name = document.getElementById('sessionName').value.trim() || ('Strategy ' + (odds_history.length + 1));
+    odds_history.push({ name, date: new Date().toISOString(), data: JSON.parse(JSON.stringify(odds_current)) });
+    odds_saveHistory();
+    odds_current = odds_defaultBars();
+    odds_saveCurrent();
+    document.getElementById('sessionName').value = '';
+    odds_render();
+  }
+
+  function odds_toggleHistory() {
+    const panel = document.getElementById('historyPanel');
+    panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+    if (panel.style.display === 'block') odds_renderHistory();
+  }
+
+  function odds_renderHistory() {
+    const panel = document.getElementById('historyPanel');
+    if (odds_history.length === 0) {
+      panel.innerHTML = '<h2>Saved Sessions</h2><p>No saved sessions yet.</p>';
+      return;
+    }
+    let html = '<h2>Saved Sessions</h2>';
+    odds_history.slice().reverse().forEach((sess, revIdx) => {
+      const realIdx = odds_history.length - 1 - revIdx;
+      html += `<div class="session-card"><button class="del-session" onclick="odds_deleteSession(${realIdx})">Delete</button>`;
+      html += `<b>${sess.name}</b><br><span style="color:#888">${new Date(sess.date).toLocaleString()}</span>`;
+      html += '<table><tr><th>Bar</th><th>W</th><th>L</th><th>Win%</th></tr>';
+      sess.data.forEach(g => {
+        const wr = odds_winRate(g);
+        html += `<tr><td>${g.label}</td><td>${g.wins}</td><td>${g.losses}</td><td>${wr===null?'—':wr.toFixed(1)+'%'}</td></tr>`;
+      });
+      html += '</table></div>';
+    });
+    panel.innerHTML = html;
+  }
+
+  function odds_deleteSession(idx) {
+    odds_history.splice(idx, 1);
+    odds_saveHistory();
+    odds_renderHistory();
+  }
+
+  // ============ BACKTEST RESEARCH MODULE ============
+  let btProjects = JSON.parse(localStorage.getItem('btProjects') || '[]');
+  let btTrash = JSON.parse(localStorage.getItem('btTrash') || '[]');
+  let btState = { view: 'projects', projectId: null, versionId: null, dataTab: 'in-sample', tempDir: 'long', tempDataType: 'in-sample', showArchived: false, searchQuery: '', searchFilters: {} };
+
+  function bt_saveTrash() { localStorage.setItem('btTrash', JSON.stringify(btTrash)); }
+
+  // --- Trash / Recovery ---
+  function bt_restoreTrashItem(trashId) {
+    const item = btTrash.find(x => x.id === trashId);
+    if (!item) return;
+    if (item.type === 'project') {
+      btProjects.push(item.data);
+    } else if (item.type === 'version') {
+      const proj = bt_findProject(item.parentProjectId);
+      if (!proj) { alert('The original project no longer exists — cannot restore here.'); return; }
+      proj.versions.push(item.data);
+    } else if (item.type === 'trade') {
+      const proj = bt_findProject(item.parentProjectId);
+      const ver = proj && bt_findVersion(proj, item.parentVersionId);
+      if (!ver) { alert('The original project/version no longer exists — cannot restore here.'); return; }
+      ver.trades.push(item.data);
+    } else if (item.type === 'liveTrade') {
+      const proj = bt_findProject(item.parentProjectId);
+      const ver = proj && bt_findVersion(proj, item.parentVersionId);
+      if (!ver) { alert('The original project/version no longer exists — cannot restore here.'); return; }
+      if (!ver.liveTrades) ver.liveTrades = [];
+      ver.liveTrades.push(item.data);
+    }
+    btTrash = btTrash.filter(x => x.id !== trashId);
+    bt_save(); bt_saveTrash();
+    bt_render();
+  }
+
+  function bt_permanentlyDeleteTrashItem(trashId) {
+    if (!confirm('Permanently delete this? This cannot be undone.')) return;
+    btTrash = btTrash.filter(x => x.id !== trashId);
+    bt_saveTrash();
+    bt_render();
+  }
+
+  function bt_emptyTrash() {
+    if (btTrash.length === 0) return;
+    if (!confirm('Permanently delete everything in Trash? This cannot be undone.')) return;
+    btTrash = [];
+    bt_saveTrash();
+    bt_render();
+  }
+
+  // --- Search & Filter ---
+  function bt_runSearchNav() { btState.view = 'search'; bt_render(); }
+
+  function bt_searchAll(query) {
+    const q = query.trim().toLowerCase();
+    let results = [];
+    btProjects.forEach(proj => {
+      proj.versions.forEach(ver => {
+        ver.trades.forEach(t => {
+          const hay = [proj.name, ver.label, t.direction, t.dataType, t.marketEnv, t.volatility, t.session, t.setupType, t.notes].join(' ').toLowerCase();
+          if (!q || hay.includes(q)) results.push({ kind: 'Backtest Trade', proj, ver, item: t, text: `#${t.num} ${t.direction} ${bt_fmtR(t.resultR)} · ${t.date}` });
+        });
+        (ver.liveTrades||[]).forEach(t => {
+          const hay = [proj.name, ver.label, t.direction, t.contextBefore, t.mistakes, t.wentWell, t.wentBadly, t.learned].join(' ').toLowerCase();
+          if (!q || hay.includes(q)) results.push({ kind: 'Live Trade', proj, ver, item: t, text: `#${t.num} ${t.direction} ${bt_fmtR(t.resultR)} · ${t.date}` });
+        });
+      });
+      (proj.hypotheses||[]).forEach(h => {
+        const hay = [h.observation, h.hypothesis, h.status].join(' ').toLowerCase();
+        if (!q || hay.includes(q)) results.push({ kind: 'Hypothesis', proj, ver: null, item: h, text: (h.observation || h.hypothesis || '').slice(0,60) });
+      });
+    });
+    return results;
+  }
+
+  // --- Backup / Export ---
+  function bt_downloadBackup() {
+    const backup = { exportedAt: new Date().toISOString(), projects: btProjects, trash: btTrash };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'backtest-research-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  function bt_restoreBackupFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const backup = JSON.parse(e.target.result);
+        if (!backup.projects) throw new Error('Not a valid backup file');
+        if (!confirm(`This backup has ${backup.projects.length} project(s). Restoring will REPLACE all current data. Continue?`)) return;
+        btProjects = backup.projects;
+        btTrash = backup.trash || [];
+        bt_save(); bt_saveTrash();
+        alert('Backup restored.');
+        btState.view = 'projects';
+        bt_render();
+      } catch (err) {
+        alert('Could not read this file as a valid backup: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function bt_exportAllTradesCSV() {
+    let rows = [['project','version','type','num','date','direction','resultR','dataType_or_rulesFollowed']];
+    btProjects.forEach(proj => {
+      proj.versions.forEach(ver => {
+        ver.trades.forEach(t => rows.push([proj.name, ver.label, 'backtest', t.num, t.date, t.direction, t.resultR, t.dataType]));
+        (ver.liveTrades||[]).forEach(t => rows.push([proj.name, ver.label, 'live', t.num, t.date, t.direction, t.resultR, t.rulesFollowed]));
+      });
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'all-trades-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+
+
+  function bt_save() { localStorage.setItem('btProjects', JSON.stringify(btProjects)); }
+  function bt_uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function bt_findProject(id) { return btProjects.find(p => p.id === id); }
+  function bt_findVersion(proj, vid) { return proj.versions.find(v => v.id === vid); }
+
+  function bt_esc(s) { return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function bt_newProject() {
+    const name = document.getElementById('btNewProjName').value.trim();
+    if (!name) return;
+    const proj = {
+      id: bt_uid(), name,
+      asset: document.getElementById('btNewAsset').value.trim(),
+      higherTF: document.getElementById('btNewHTF').value.trim(),
+      lowerTF: document.getElementById('btNewLTF').value.trim(),
+      dateStart: document.getElementById('btNewDateStart').value,
+      dateEnd: document.getElementById('btNewDateEnd').value,
+      notes: '',
+      versions: []
+    };
+    btProjects.push(proj);
+    bt_save();
+    btState.view = 'project'; btState.projectId = proj.id;
+    bt_render();
+  }
+
+  function bt_archiveProject(id) {
+    const proj = bt_findProject(id);
+    proj.archived = !proj.archived;
+    bt_save(); bt_render();
+  }
+
+  function bt_trashProject(id) {
+    if (!confirm('Move this project (and all its versions and trades) to Trash? You can restore it later.')) return;
+    const proj = bt_findProject(id);
+    btTrash.push({ id: bt_uid(), type: 'project', deletedAt: new Date().toISOString(), data: proj });
+    btProjects = btProjects.filter(p => p.id !== id);
+    bt_save(); bt_saveTrash();
+    btState.view = 'projects';
+    bt_render();
+  }
+
+  function bt_permanentDeleteProject(id) {
+    if (!confirm('Permanently delete this project? This cannot be undone — all versions, trades, and hypotheses will be lost.')) return;
+    btProjects = btProjects.filter(p => p.id !== id);
+    bt_save();
+    btState.view = 'projects';
+    bt_render();
+  }
+
+  function bt_openProject(id) { btState.view = 'project'; btState.projectId = id; bt_render(); }
+
+  function bt_updateProjectField(field, value) {
+    const proj = bt_findProject(btState.projectId);
+    proj[field] = value;
+    bt_save();
+  }
+
+  // --- Research Hypotheses (per project) ---
+  function bt_addHypothesis() {
+    const proj = bt_findProject(btState.projectId);
+    if (!proj.hypotheses) proj.hypotheses = [];
+    const obs = document.getElementById('btHypObs').value.trim();
+    const hyp = document.getElementById('btHypText').value.trim();
+    if (!obs && !hyp) return;
+    const versionId = document.getElementById('btHypVersion') ? document.getElementById('btHypVersion').value : '';
+    proj.hypotheses.push({ id: bt_uid(), observation: obs, hypothesis: hyp, status: 'Observation only', versionId });
+    bt_save();
+    document.getElementById('btHypObs').value = '';
+    document.getElementById('btHypText').value = '';
+    bt_render();
+  }
+
+  function bt_updateHypStatus(hid, status) {
+    const proj = bt_findProject(btState.projectId);
+    const h = proj.hypotheses.find(x => x.id === hid);
+    h.status = status;
+    bt_save(); bt_render();
+  }
+
+  function bt_deleteHypothesis(hid) {
+    const proj = bt_findProject(btState.projectId);
+    proj.hypotheses = proj.hypotheses.filter(x => x.id !== hid);
+    bt_save(); bt_render();
+  }
+
+  function bt_addVersion() {
+    const proj = bt_findProject(btState.projectId);
+    const labelInput = document.getElementById('btNewVersionLabel');
+    const label = labelInput.value.trim();
+    if (!label) return;
+    const copyFrom = document.getElementById('btCopyFromVersion') ? document.getElementById('btCopyFromVersion').value : '';
+    let rulebook = { market:'', timeframes:'', setupConditions:'', entryRule:'', stopLossRule:'', takeProfitRule:'', riskReward:'', invalidConditions:'', setupExpiration:'', notes:'' };
+    if (copyFrom) {
+      const src = bt_findVersion(proj, copyFrom);
+      if (src) rulebook = JSON.parse(JSON.stringify(src.rulebook));
+    }
+    const version = { id: bt_uid(), label, frozen: false, rulebook, trades: [] };
+    proj.versions.push(version);
+    bt_save();
+    btState.view = 'version'; btState.versionId = version.id;
+    bt_render();
+  }
+
+  function bt_openVersion(vid) { btState.view = 'version'; btState.versionId = vid; btState.dataTab = 'in-sample'; bt_render(); }
+
+  function bt_updateRulebookField(field, value) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    ver.rulebook[field] = value;
+    bt_save();
+  }
+
+  function bt_toggleFreeze() {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    if (!ver.frozen) {
+      if (!confirm('Freeze this version? Once frozen, editing the rulebook will be discouraged — you should create a new version instead if you need to change rules.')) return;
+      ver.frozen = true;
+    } else {
+      if (!confirm('Unfreeze this version? Editing rules on a version with existing results can affect the validity of your research.')) return;
+      ver.frozen = false;
+    }
+    bt_save(); bt_render();
+  }
+
+  function bt_deleteVersion(vid) {
+    if (!confirm('Move this version (and all its trades) to Trash? You can restore it later.')) return;
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, vid);
+    btTrash.push({ id: bt_uid(), type: 'version', deletedAt: new Date().toISOString(), data: ver, parentProjectId: proj.id, parentProjectName: proj.name });
+    proj.versions = proj.versions.filter(v => v.id !== vid);
+    bt_save(); bt_saveTrash();
+    btState.view = 'project';
+    bt_render();
+  }
+
+  function bt_setTempDir(d) { btState.tempDir = d; bt_render(); }
+  function bt_setTempDataType(d) { btState.tempDataType = d; bt_render(); }
+
+  function bt_logTrade(r) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    const dateVal = document.getElementById('btTradeDate') ? document.getElementById('btTradeDate').value : new Date().toISOString().slice(0,10);
+    const num = ver.trades.length + 1;
+    ver.trades.push({
+      id: bt_uid(), num, date: dateVal || new Date().toISOString().slice(0,10),
+      direction: btState.tempDir, resultR: r, dataType: btState.tempDataType,
+      marketEnv: '', volatility: '', session: '', setupType: '', notes: '', expanded: false
+    });
+    bt_save();
+    bt_render();
+  }
+
+  function bt_logCustomR() {
+    const val = parseFloat(document.getElementById('btCustomR').value);
+    if (isNaN(val)) { alert('Enter a valid R number, e.g. 2.5 or -0.5'); return; }
+    bt_logTrade(val);
+    document.getElementById('btCustomR').value = '';
+  }
+
+  function bt_toggleTradeExpand(tid) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    const t = ver.trades.find(x => x.id === tid);
+    t.expanded = !t.expanded;
+    bt_render();
+  }
+
+  function bt_updateTradeField(tid, field, value) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    const t = ver.trades.find(x => x.id === tid);
+    if (field === 'resultR') value = parseFloat(value) || 0;
+    t[field] = value;
+    bt_save();
+  }
+
+  function bt_deleteTrade(tid) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    const t = ver.trades.find(x => x.id === tid);
+    btTrash.push({ id: bt_uid(), type: 'trade', deletedAt: new Date().toISOString(), data: t, parentProjectId: proj.id, parentVersionId: ver.id, parentLabel: proj.name + ' / ' + ver.label });
+    ver.trades = ver.trades.filter(x => x.id !== tid);
+    ver.trades.forEach((t,i) => t.num = i+1);
+    bt_save(); bt_saveTrash(); bt_render();
+  }
+
+  function bt_setDataTab(tab) { btState.dataTab = tab; bt_render(); }
+
+  function bt_computeMetrics(trades) {
+    const total = trades.length;
+    if (total === 0) return { total: 0 };
+    const wins = trades.filter(t => t.resultR > 0);
+    const losses = trades.filter(t => t.resultR < 0);
+    const be = trades.filter(t => t.resultR === 0);
+    const totalR = trades.reduce((s,t) => s + t.resultR, 0);
+    const avgWin = wins.length ? wins.reduce((s,t)=>s+t.resultR,0)/wins.length : null;
+    const avgLoss = losses.length ? losses.reduce((s,t)=>s+t.resultR,0)/losses.length : null;
+    const winRate = (wins.length + losses.length) ? wins.length/(wins.length+losses.length)*100 : null;
+    const expectancy = totalR / total;
+
+    let cum = 0, peak = 0, maxDD = 0, equity = [];
+    trades.forEach(t => {
+      cum += t.resultR;
+      if (cum > peak) peak = cum;
+      const dd = cum - peak;
+      if (dd < maxDD) maxDD = dd;
+      equity.push(cum);
+    });
+    const currentDD = equity.length ? equity[equity.length-1] - peak : 0;
+
+    let longestWin=0, longestLoss=0, curWinRun=0, curLossRun=0;
+    let sequence = [];
+    trades.forEach(t => {
+      if (t.resultR > 0) { curWinRun++; curLossRun=0; sequence.push('W'); }
+      else if (t.resultR < 0) { curLossRun++; curWinRun=0; sequence.push('L'); }
+      else { curWinRun=0; curLossRun=0; sequence.push('B'); }
+      if (curWinRun > longestWin) longestWin = curWinRun;
+      if (curLossRun > longestLoss) longestLoss = curLossRun;
+    });
+    let currentStreak = 0, currentStreakType = '';
+    for (let i = sequence.length-1; i >= 0; i--) {
+      if (i === sequence.length-1) { currentStreakType = sequence[i]; currentStreak = 1; }
+      else if (sequence[i] === currentStreakType) currentStreak++;
+      else break;
+    }
+
+    return { total, wins: wins.length, losses: losses.length, be: be.length, winRate, avgWin, avgLoss, totalR, expectancy, maxDD, currentDD, longestWin, longestLoss, currentStreak, currentStreakType, sequence, equity };
+  }
+
+  function bt_fmtR(v) { if (v===null||v===undefined||isNaN(v)) return '—'; return (v>0?'+':'') + v.toFixed(2) + 'R'; }
+  function bt_fmtPct(v) { return v===null ? '—' : v.toFixed(1)+'%'; }
+
+  // --- Winner/Loser condition comparison ---
+  btState.condField = 'marketEnv';
+  btState.condValue = '';
+
+  function bt_setCondField(field) { btState.condField = field; btState.condValue = ''; bt_render(); }
+  function bt_setCondValue(value) { btState.condValue = value; bt_render(); }
+
+  function bt_distinctValues(trades, field) {
+    const set = new Set();
+    trades.forEach(t => { if (t[field] && t[field].trim()) set.add(t[field].trim()); });
+    return Array.from(set);
+  }
+
+  function bt_conditionCompare(trades, field, value) {
+    const present = trades.filter(t => (t[field]||'').trim() === value);
+    const absent = trades.filter(t => (t[field]||'').trim() !== value);
+    const winsWithValue = trades.filter(t => t.resultR > 0 && (t[field]||'').trim() === value).length;
+    const lossesWithValue = trades.filter(t => t.resultR < 0 && (t[field]||'').trim() === value).length;
+    const totalWins = trades.filter(t => t.resultR > 0).length;
+    const totalLosses = trades.filter(t => t.resultR < 0).length;
+    return {
+      present: bt_computeMetrics(present),
+      absent: bt_computeMetrics(absent),
+      pctOfWinners: totalWins ? (winsWithValue/totalWins*100) : null,
+      pctOfLosers: totalLosses ? (lossesWithValue/totalLosses*100) : null
+    };
+  }
+
+  function bt_equitySvg(equity) {
+    if (equity.length === 0) return '<div class="bt-note">No trades yet — nothing to plot.</div>';
+    const w = 400, h = 140, pad = 10;
+    const min = Math.min(0, ...equity), max = Math.max(0, ...equity);
+    const range = (max - min) || 1;
+    const stepX = equity.length > 1 ? (w - pad*2) / (equity.length - 1) : 0;
+    const pts = equity.map((v,i) => {
+      const x = pad + i*stepX;
+      const y = h - pad - ((v - min) / range) * (h - pad*2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    const zeroY = h - pad - ((0 - min) / range) * (h - pad*2);
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:140px;background:#f8f8f8;border-radius:8px;">
+      <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w-pad}" y2="${zeroY.toFixed(1)}" stroke="#ccc" stroke-dasharray="4,4"/>
+      <polyline points="${pts}" fill="none" stroke="#2b6cb0" stroke-width="2"/>
+    </svg>`;
+  }
+
+  function bt_exportVersionCSV() {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    let rows = [['num','date','direction','resultR','dataType','marketEnv','volatility','session','setupType','notes']];
+    ver.trades.forEach(t => rows.push([t.num,t.date,t.direction,t.resultR,t.dataType,t.marketEnv,t.volatility,t.session,t.setupType,t.notes]));
+    const csv = rows.map(r => r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${proj.name}-${ver.label}-trades.csv`.replace(/\s+/g,'_');
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  // --- Live Trading Journal ---
+  btState.liveTempDir = 'long';
+  btState.liveTempFollowed = 'yes';
+
+  function bt_setLiveTempDir(d) { btState.liveTempDir = d; bt_render(); }
+  function bt_setLiveTempFollowed(v) { btState.liveTempFollowed = v; bt_render(); }
+
+  function bt_logLiveTrade(r) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    if (!ver.liveTrades) ver.liveTrades = [];
+    const dateVal = document.getElementById('btLiveTradeDate') ? document.getElementById('btLiveTradeDate').value : new Date().toISOString().slice(0,10);
+    const num = ver.liveTrades.length + 1;
+    ver.liveTrades.push({
+      id: bt_uid(), num, date: dateVal || new Date().toISOString().slice(0,10),
+      direction: btState.liveTempDir, resultR: r,
+      rulesFollowed: btState.liveTempFollowed, riskRulesFollowed: '', exitedPerPlan: '',
+      contextBefore: '', changesMade: '', emotionalState: '', mistakes: '', marketEvents: '',
+      wentWell: '', wentBadly: '', learned: '', expanded: false
+    });
+    bt_save();
+    bt_render();
+  }
+
+  function bt_logLiveCustomR() {
+    const val = parseFloat(document.getElementById('btLiveCustomR').value);
+    if (isNaN(val)) { alert('Enter a valid R number, e.g. 2.5 or -0.5'); return; }
+    bt_logLiveTrade(val);
+    document.getElementById('btLiveCustomR').value = '';
+  }
+
+  function bt_toggleLiveTradeExpand(tid) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    const t = ver.liveTrades.find(x => x.id === tid);
+    t.expanded = !t.expanded;
+    bt_render();
+  }
+
+  function bt_updateLiveTradeField(tid, field, value) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    const t = ver.liveTrades.find(x => x.id === tid);
+    if (field === 'resultR') value = parseFloat(value) || 0;
+    t[field] = value;
+    bt_save();
+  }
+
+  function bt_deleteLiveTrade(tid) {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    const t = ver.liveTrades.find(x => x.id === tid);
+    btTrash.push({ id: bt_uid(), type: 'liveTrade', deletedAt: new Date().toISOString(), data: t, parentProjectId: proj.id, parentVersionId: ver.id, parentLabel: proj.name + ' / ' + ver.label });
+    ver.liveTrades = ver.liveTrades.filter(x => x.id !== tid);
+    ver.liveTrades.forEach((t,i) => t.num = i+1);
+    bt_save(); bt_saveTrash(); bt_render();
+  }
+
+  function bt_complianceScore(trades, sinceDays) {
+    const cutoff = sinceDays === null ? null : new Date(Date.now() - sinceDays*86400000);
+    const relevant = trades.filter(t => {
+      if (t.rulesFollowed !== 'yes' && t.rulesFollowed !== 'no') return false;
+      if (cutoff === null) return true;
+      return new Date(t.date) >= cutoff;
+    });
+    if (relevant.length === 0) return null;
+    const followed = relevant.filter(t => t.rulesFollowed === 'yes').length;
+    return (followed / relevant.length) * 100;
+  }
+
+  function bt_exportLiveCSV() {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    let rows = [['num','date','direction','resultR','rulesFollowed','riskRulesFollowed','exitedPerPlan','contextBefore','changesMade','emotionalState','mistakes','marketEvents','wentWell','wentBadly','learned']];
+    (ver.liveTrades||[]).forEach(t => rows.push([t.num,t.date,t.direction,t.resultR,t.rulesFollowed,t.riskRulesFollowed,t.exitedPerPlan,t.contextBefore,t.changesMade,t.emotionalState,t.mistakes,t.marketEvents,t.wentWell,t.wentBadly,t.learned]));
+    const csv = rows.map(r => r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${proj.name}-${ver.label}-live-journal.csv`.replace(/\s+/g,'_');
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  function bt_render() {
+    document.getElementById('btTitle').textContent = 'Backtest Research';
+    const app = document.getElementById('btApp');
+    if (btState.view === 'projects') { app.innerHTML = bt_renderProjectsView(); return; }
+    if (btState.view === 'project') { app.innerHTML = bt_renderProjectView(); return; }
+    if (btState.view === 'version') { app.innerHTML = bt_renderVersionView(); return; }
+    if (btState.view === 'search') { app.innerHTML = bt_renderSearchView(); return; }
+    if (btState.view === 'trash') { app.innerHTML = bt_renderTrashView(); return; }
+    if (btState.view === 'backup') { app.innerHTML = bt_renderBackupView(); return; }
+  }
+
+  function bt_renderSearchView() {
+    let html = `<button class="bt-tab" onclick="btState.view='projects'; bt_render();">← All Projects</button>`;
+    html += `<div class="bt-card"><h3>Search</h3>`;
+    html += `<input class="bt-input" id="btSearchInput" placeholder="Search trades, notes, hypotheses..." value="${bt_esc(btState.searchQuery)}" oninput="btState.searchQuery=this.value; bt_render();">`;
+    const results = bt_searchAll(btState.searchQuery);
+    html += `<div class="bt-note">${results.length} result${results.length!==1?'s':''}</div>`;
+    html += '</div>';
+    results.slice(0,100).forEach(r => {
+      html += `<div class="bt-trade-row" style="cursor:pointer;" onclick="btState.projectId='${r.proj.id}'; ${r.ver ? `btState.versionId='${r.ver.id}'; btState.view='version';` : `btState.view='project';`} bt_render();">
+        <span>[${r.kind}] ${bt_esc(r.text)}</span>
+        <span style="color:#888;font-size:11px;">${bt_esc(r.proj.name)}${r.ver?' / '+bt_esc(r.ver.label):''}</span>
+      </div>`;
+    });
+    return html;
+  }
+
+  function bt_renderTrashView() {
+    let html = `<button class="bt-tab" onclick="btState.view='projects'; bt_render();">← All Projects</button>`;
+    html += `<div class="bt-card"><h3>Trash</h3>`;
+    html += `<div class="bt-note">Deleted projects, versions, and trades land here. Restore them anytime, or empty the trash permanently.</div>`;
+    if (btTrash.length > 0) {
+      html += `<button class="bt-btn-danger" style="width:100%;padding:8px;border:none;border-radius:8px;" onclick="bt_emptyTrash()">Empty Trash Permanently</button>`;
+    }
+    html += '</div>';
+    if (btTrash.length === 0) {
+      html += '<div class="bt-note">Trash is empty.</div>';
+    } else {
+      btTrash.slice().reverse().forEach(item => {
+        const label = item.type === 'project' ? item.data.name
+          : item.type === 'version' ? `${item.parentProjectName} / ${item.data.label}`
+          : `${item.parentLabel} · trade`;
+        html += `<div class="bt-hyp-card">
+          <div><b>[${item.type}]</b> ${bt_esc(label)}</div>
+          <div style="color:#888;font-size:11px;">Deleted ${new Date(item.deletedAt).toLocaleString()}</div>
+          <div class="bt-row-btns" style="margin-top:6px;">
+            <button class="bt-btn-primary" onclick="bt_restoreTrashItem('${item.id}')">Restore</button>
+            <button class="bt-btn-danger" onclick="bt_permanentlyDeleteTrashItem('${item.id}')">Delete Forever</button>
+          </div>
+        </div>`;
+      });
+    }
+    return html;
+  }
+
+  function bt_renderBackupView() {
+    let html = `<button class="bt-tab" onclick="btState.view='projects'; bt_render();">← All Projects</button>`;
+    html += `<div class="bt-card"><h3>Backup & Export</h3>`;
+    html += `<div class="bt-note">Your data lives only in this browser. Back it up regularly so you never lose your research.</div>`;
+    html += `<button class="bt-btn-primary" style="width:100%;padding:12px;border:none;border-radius:8px;margin-bottom:10px;" onclick="bt_downloadBackup()">Download Full Backup (JSON)</button>`;
+    html += `<label class="bt-field-label">Restore from a backup file</label>
+      <input class="bt-input" type="file" accept="application/json" onchange="bt_restoreBackupFile(this)">`;
+    html += `<div class="bt-note">Restoring replaces all current data with what's in the backup file.</div>`;
+    html += `<button style="width:100%;padding:10px;border:none;border-radius:8px;background:#333;color:white;" onclick="bt_exportAllTradesCSV()">Export All Trades — All Projects (CSV)</button>`;
+    html += '</div>';
+    return html;
+  }
+
+  function bt_renderProjectsView() {
+    let html = `<div class="bt-row-btns" style="margin-bottom:12px;">
+      <button onclick="btState.view='search'; bt_render();">🔍 Search</button>
+      <button onclick="btState.view='trash'; bt_render();">🗑 Trash${btTrash.length?' ('+btTrash.length+')':''}</button>
+      <button onclick="btState.view='backup'; bt_render();">💾 Backup</button>
+    </div>`;
+    html += '<div class="bt-card"><h3>New Backtest Project</h3>';
+    html += `<label class="bt-field-label">Project name</label><input class="bt-input" id="btNewProjName" placeholder="e.g. JP225 Strategy V1.0">`;
+    html += `<label class="bt-field-label">Asset / Market</label><input class="bt-input" id="btNewAsset" placeholder="e.g. JP225">`;
+    html += `<label class="bt-field-label">Higher timeframe</label><input class="bt-input" id="btNewHTF" placeholder="e.g. 1 Hour">`;
+    html += `<label class="bt-field-label">Entry (lower) timeframe</label><input class="bt-input" id="btNewLTF" placeholder="e.g. 5 Minutes">`;
+    html += `<label class="bt-field-label">Test period start</label><input class="bt-input" type="date" id="btNewDateStart">`;
+    html += `<label class="bt-field-label">Test period end</label><input class="bt-input" type="date" id="btNewDateEnd">`;
+    html += `<button class="bt-row-btns bt-btn-primary" style="width:100%;padding:12px;border:none;border-radius:8px;" onclick="bt_newProject()">Create Project</button>`;
+    html += '</div>';
+
+    const visibleProjects = btProjects.filter(p => btState.showArchived ? true : !p.archived);
+    const archivedCount = btProjects.filter(p => p.archived).length;
+
+    if (visibleProjects.length === 0) {
+      html += '<div class="bt-note">No projects yet — create your first one above.</div>';
+    } else {
+      visibleProjects.forEach(p => {
+        const totalTrades = p.versions.reduce((s,v)=>s+v.trades.length,0);
+        html += `<div class="bt-card" onclick="bt_openProject('${p.id}')" style="cursor:pointer;">
+          <h3>${bt_esc(p.name)}${p.archived?' <span class=\"bt-frozen-badge\" style=\"background:#ccc;\">ARCHIVED</span>':''}</h3>
+          <div class="meta">${bt_esc(p.asset||'—')} · ${p.versions.length} version${p.versions.length!==1?'s':''} · ${totalTrades} trades total</div>
+        </div>`;
+      });
+    }
+    if (archivedCount > 0) {
+      html += `<button class="bt-tab" onclick="btState.showArchived=!btState.showArchived; bt_render();">${btState.showArchived?'Hide':'Show'} Archived (${archivedCount})</button>`;
+    }
+    return html;
+  }
+
+  function bt_renderProjectView() {
+    const proj = bt_findProject(btState.projectId);
+    if (!proj) { btState.view = 'projects'; return bt_renderProjectsView(); }
+    let html = `<button class="bt-tab" onclick="btState.view='projects'; bt_render();">← All Projects</button>`;
+    html += `<div class="bt-card"><h3>${bt_esc(proj.name)}</h3>`;
+    html += `<label class="bt-field-label">Asset / Market</label><input class="bt-input" value="${bt_esc(proj.asset)}" onchange="bt_updateProjectField('asset', this.value)">`;
+    html += `<label class="bt-field-label">Higher timeframe</label><input class="bt-input" value="${bt_esc(proj.higherTF)}" onchange="bt_updateProjectField('higherTF', this.value)">`;
+    html += `<label class="bt-field-label">Entry timeframe</label><input class="bt-input" value="${bt_esc(proj.lowerTF)}" onchange="bt_updateProjectField('lowerTF', this.value)">`;
+    html += `<label class="bt-field-label">Notes</label><textarea class="bt-textarea" onchange="bt_updateProjectField('notes', this.value)">${bt_esc(proj.notes)}</textarea>`;
+    html += `<div class="bt-row-btns" style="margin-top:6px;">
+      <button onclick="bt_archiveProject('${proj.id}')">${proj.archived?'Unarchive':'Archive'}</button>
+      <button onclick="bt_trashProject('${proj.id}')">Move to Trash</button>
+      <button class="bt-btn-danger" onclick="bt_permanentDeleteProject('${proj.id}')">Delete Forever</button>
+    </div>`;
+    html += '</div>';
+
+    html += `<div class="bt-card"><h3>Strategy Versions</h3>`;
+    if (proj.versions.length === 0) {
+      html += '<div class="bt-note">No versions yet. Create your first one below.</div>';
+    }
+    proj.versions.forEach(v => {
+      const m = bt_computeMetrics(v.trades.filter(t=>t.dataType==='in-sample'));
+      html += `<div class="bt-trade-row" style="cursor:pointer;" onclick="bt_openVersion('${v.id}')">
+        <span>${bt_esc(v.label)}${v.frozen?'<span class=\"bt-frozen-badge\">FROZEN</span>':''}</span>
+        <span>${m.total} trades · ${m.total? bt_fmtR(m.expectancy)+'/trade' : ''}</span>
+      </div>`;
+    });
+    html += `<label class="bt-field-label" style="margin-top:12px;">New version label</label>
+      <input class="bt-input" id="btNewVersionLabel" placeholder="e.g. V1.0">`;
+    if (proj.versions.length > 0) {
+      html += `<label class="bt-field-label">Copy rulebook from (optional)</label>
+        <select class="bt-select" id="btCopyFromVersion">
+          <option value="">— Start blank —</option>
+          ${proj.versions.map(v => `<option value="${v.id}">${bt_esc(v.label)}</option>`).join('')}
+        </select>`;
+    }
+    html += `<button class="bt-btn-primary" style="width:100%;padding:10px;border:none;border-radius:8px;" onclick="bt_addVersion()">Create Version</button>`;
+    html += '</div>';
+
+    // Research Hypotheses
+    if (!proj.hypotheses) proj.hypotheses = [];
+    html += `<div class="bt-card"><h3>Research Hypotheses</h3>`;
+    html += `<div class="bt-note">Record observations and hunches as you go — then track whether the data actually supports them.</div>`;
+    proj.hypotheses.slice().reverse().forEach(h => {
+      const statusOptions = ['Observation only','Currently testing','Supported by data','Not supported','Unclear'];
+      const linkedVer = proj.versions.find(v => v.id === h.versionId);
+      html += `<div class="bt-hyp-card">
+        ${h.observation ? `<div><b>Observation:</b> ${bt_esc(h.observation)}</div>` : ''}
+        ${h.hypothesis ? `<div><b>Hypothesis:</b> ${bt_esc(h.hypothesis)}</div>` : ''}
+        ${linkedVer ? `<div style="color:#888;font-size:11px;">Related: ${bt_esc(linkedVer.label)}</div>` : ''}
+        <div style="margin-top:6px;">
+          <select class="bt-select" style="width:auto;display:inline-block;margin-bottom:0;" onchange="bt_updateHypStatus('${h.id}', this.value)">
+            ${statusOptions.map(s => `<option value="${s}" ${h.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button style="border:none;background:#eee;border-radius:6px;padding:6px 10px;font-size:12px;" onclick="bt_deleteHypothesis('${h.id}')">Delete</button>
+        </div>
+      </div>`;
+    });
+    html += `<label class="bt-field-label">Observation</label><textarea class="bt-textarea" id="btHypObs" placeholder="What did you notice?"></textarea>`;
+    html += `<label class="bt-field-label">Hypothesis</label><textarea class="bt-textarea" id="btHypText" placeholder="What might explain it?"></textarea>`;
+    if (proj.versions.length > 0) {
+      html += `<label class="bt-field-label">Related version (optional)</label>
+        <select class="bt-select" id="btHypVersion">
+          <option value="">—</option>
+          ${proj.versions.map(v => `<option value="${v.id}">${bt_esc(v.label)}</option>`).join('')}
+        </select>`;
+    }
+    html += `<button class="bt-btn-primary" style="width:100%;padding:10px;border:none;border-radius:8px;" onclick="bt_addHypothesis()">Add Hypothesis</button>`;
+    html += '</div>';
+    return html;
+  }
+
+  function bt_renderVersionView() {
+    const proj = bt_findProject(btState.projectId);
+    const ver = bt_findVersion(proj, btState.versionId);
+    if (!ver) { btState.view = 'project'; return bt_renderProjectView(); }
+
+    let html = `<button class="bt-tab" onclick="btState.view='project'; bt_render();">← ${bt_esc(proj.name)}</button>`;
+    html += `<div class="bt-card"><h3>${bt_esc(ver.label)} ${ver.frozen?'<span class=\"bt-frozen-badge\">FROZEN</span>':''}</h3>`;
+
+    if (ver.frozen) {
+      html += `<div class="bt-warn">This version is frozen for testing. Editing the rulebook may affect the validity of your research. If you need to change rules, create a new version instead.</div>`;
+    }
+    const dis = ver.frozen ? 'disabled' : '';
+    const rb = ver.rulebook;
+    const rbField = (key, label, placeholder, isTextarea) => {
+      const tag = isTextarea ? 'textarea' : 'input';
+      const valAttr = isTextarea ? '' : `value="${bt_esc(rb[key])}"`;
+      const inner = isTextarea ? bt_esc(rb[key]) : '';
+      const cls = isTextarea ? 'bt-textarea' : 'bt-input';
+      return `<label class="bt-field-label">${label}</label><${tag} class="${cls}" ${valAttr} placeholder="${placeholder}" ${dis} onchange="bt_updateRulebookField('${key}', this.value)">${inner}</${tag}>`;
+    };
+    html += rbField('market','Market','What asset am I trading?');
+    html += rbField('timeframes','Timeframes','Higher + lower timeframe');
+    html += rbField('setupConditions','Setup Conditions','What must happen before a trade is valid?', true);
+    html += rbField('entryRule','Entry Rule','Exactly where/when do I enter?', true);
+    html += rbField('stopLossRule','Stop Loss Rule','Where is my stop?');
+    html += rbField('takeProfitRule','Take Profit Rule','Where is my target?');
+    html += rbField('riskReward','Risk/Reward','e.g. Risk 1R, Target 5R');
+    html += rbField('invalidConditions','Invalid Conditions','What makes a setup invalid?', true);
+    html += rbField('setupExpiration','Setup Expiration','How long is the setup valid?');
+    html += rbField('notes','Additional Notes','', true);
+
+    html += `<button class="${ver.frozen?'':'bt-btn-primary'}" style="width:100%;padding:10px;border:none;border-radius:8px;margin-top:6px;background:${ver.frozen?'#ddd':''}" onclick="bt_toggleFreeze()">${ver.frozen?'Unfreeze Version':'Freeze This Version'}</button>`;
+    html += `<button class="bt-btn-danger" style="width:100%;padding:8px;border:none;border-radius:8px;margin-top:6px;" onclick="bt_deleteVersion('${ver.id}')">Delete Version</button>`;
+    html += '</div>';
+
+    // Fast trade entry
+    html += `<div class="bt-card"><h3>Log a Trade</h3>`;
+    html += `<label class="bt-field-label">Date</label><input class="bt-input" type="date" id="btTradeDate" value="${new Date().toISOString().slice(0,10)}">`;
+    html += `<label class="bt-field-label">Direction</label><div class="bt-pill-row">
+      <button class="bt-pill ${btState.tempDir==='long'?'on':''}" onclick="bt_setTempDir('long')">Long</button>
+      <button class="bt-pill ${btState.tempDir==='short'?'on':''}" onclick="bt_setTempDir('short')">Short</button>
+    </div>`;
+    html += `<label class="bt-field-label">Data type</label><div class="bt-pill-row">
+      <button class="bt-pill ${btState.tempDataType==='in-sample'?'on':''}" onclick="bt_setTempDataType('in-sample')">In-Sample</button>
+      <button class="bt-pill ${btState.tempDataType==='out-of-sample'?'on':''}" onclick="bt_setTempDataType('out-of-sample')">Out-of-Sample</button>
+      <button class="bt-pill ${btState.tempDataType==='forward-test'?'on':''}" onclick="bt_setTempDataType('forward-test')">Forward Test</button>
+    </div>`;
+    html += `<div class="bt-row-btns">
+      <button class="bt-btn-primary" onclick="bt_logTrade(1)">WIN (+1R)</button>
+      <button class="bt-btn-danger" onclick="bt_logTrade(-1)">LOSS (-1R)</button>
+      <button onclick="bt_logTrade(0)">BE (0R)</button>
+    </div>`;
+    html += `<label class="bt-field-label" style="margin-top:10px;">Or log a custom R result</label>
+      <div style="display:flex;gap:8px;">
+        <input class="bt-input" style="margin-bottom:0;" type="number" step="0.1" id="btCustomR" placeholder="e.g. 2.5 or -0.5">
+        <button class="bt-btn-primary" style="padding:0 16px;border:none;border-radius:8px;" onclick="bt_logCustomR()">Log</button>
+      </div>`;
+    html += '</div>';
+
+    // Data tabs + metrics
+    const tabs = [['in-sample','In-Sample'],['out-of-sample','Out-of-Sample'],['forward-test','Forward Test'],['combined','Combined (all)']];
+    html += `<div class="bt-tab-row">`;
+    tabs.forEach(([key,label]) => {
+      html += `<button class="bt-tab ${btState.dataTab===key?'on':''}" onclick="bt_setDataTab('${key}')">${label}</button>`;
+    });
+    html += '</div>';
+
+    const filteredTrades = btState.dataTab === 'combined' ? ver.trades : ver.trades.filter(t => t.dataType === btState.dataTab);
+    const m = bt_computeMetrics(filteredTrades);
+
+    html += `<div class="bt-card"><h3>${tabs.find(t=>t[0]===btState.dataTab)[1]} Results</h3>`;
+    if (btState.dataTab === 'combined') {
+      html += `<div class="bt-note">Combined results mix in-sample, out-of-sample, and forward-test data. Use this for a quick overview only — not for judging whether the strategy actually works.</div>`;
+    }
+    if (m.total === 0) {
+      html += '<div class="bt-note">No trades logged in this category yet.</div>';
+    } else {
+      html += `<div class="bt-metric-grid">
+        <div class="bt-metric-box"><div class="v">${m.total}</div><div class="l">Total Trades</div></div>
+        <div class="bt-metric-box"><div class="v">${bt_fmtPct(m.winRate)}</div><div class="l">Win Rate</div></div>
+        <div class="bt-metric-box"><div class="v">${bt_fmtR(m.totalR)}</div><div class="l">Total R</div></div>
+        <div class="bt-metric-box"><div class="v">${bt_fmtR(m.expectancy)}</div><div class="l">Expectancy / trade</div></div>
+        <div class="bt-metric-box"><div class="v">${bt_fmtR(m.avgWin)}</div><div class="l">Avg Win</div></div>
+        <div class="bt-metric-box"><div class="v">${bt_fmtR(m.avgLoss)}</div><div class="l">Avg Loss</div></div>
+        <div class="bt-metric-box"><div class="v">${bt_fmtR(m.maxDD)}</div><div class="l">Max Drawdown</div></div>
+        <div class="bt-metric-box"><div class="v">${bt_fmtR(m.currentDD)}</div><div class="l">Current Drawdown</div></div>
+        <div class="bt-metric-box"><div class="v">${m.longestWin}</div><div class="l">Longest Win Streak</div></div>
+        <div class="bt-metric-box"><div class="v">${m.longestLoss}</div><div class="l">Longest Loss Streak</div></div>
+      </div>`;
+      html += `<div class="bt-note" style="margin-top:0;">Expectancy is a historical average, not a guaranteed future result. ${bt_fmtR(m.expectancy)} per trade means: on average, this is what each trade returned across this sample.</div>`;
+      html += `<label class="bt-field-label">Equity Curve (cumulative R)</label>`;
+      html += bt_equitySvg(m.equity);
+      html += `<label class="bt-field-label" style="margin-top:10px;">Result Sequence</label><div class="bt-seq">${m.sequence.join(' ')}</div>`;
+    }
+    html += `<button class="bt-row-btns" style="width:100%;padding:8px;border:none;border-radius:8px;margin-top:10px;background:#333;color:white;" onclick="bt_exportVersionCSV()">Export All Trades (CSV)</button>`;
+    html += '</div>';
+
+    // Winner/Loser condition comparison
+    html += `<div class="bt-card"><h3>Condition Comparison</h3>`;
+    html += `<div class="bt-note">See whether a condition genuinely affects results — comparing trades where it was present vs where it was absent, in both winners and losers.</div>`;
+    if (m.total === 0) {
+      html += '<div class="bt-note">Log some trades first to compare conditions.</div>';
+    } else {
+      const fieldOptions = [['marketEnv','Market Environment'],['volatility','Volatility'],['session','Session'],['setupType','Setup Type']];
+      html += `<label class="bt-field-label">Condition field</label><div class="bt-pill-row">`;
+      fieldOptions.forEach(([key,label]) => {
+        html += `<button class="bt-pill ${btState.condField===key?'on':''}" onclick="bt_setCondField('${key}')">${label}</button>`;
+      });
+      html += '</div>';
+
+      const values = bt_distinctValues(filteredTrades, btState.condField);
+      if (values.length === 0) {
+        html += '<div class="bt-note">No trades have this field filled in yet — tap a trade in the log below to add it.</div>';
+      } else {
+        if (!btState.condValue || !values.includes(btState.condValue)) btState.condValue = values[0];
+        html += `<label class="bt-field-label">Value to test</label><div class="bt-pill-row">`;
+        values.forEach(v => {
+          html += `<button class="bt-pill ${btState.condValue===v?'on':''}" onclick="bt_setCondValue('${bt_esc(v)}')">${bt_esc(v)}</button>`;
+        });
+        html += '</div>';
+
+        const cmp = bt_conditionCompare(filteredTrades, btState.condField, btState.condValue);
+        html += `<div class="bt-compare-cols">
+          <div class="bt-compare-col"><h4>WHEN PRESENT</h4>
+            <div class="m"><span>Trades</span><span>${cmp.present.total||0}</span></div>
+            <div class="m"><span>Win Rate</span><span>${cmp.present.total?bt_fmtPct(cmp.present.winRate):'—'}</span></div>
+            <div class="m"><span>Avg R/trade</span><span>${cmp.present.total?bt_fmtR(cmp.present.expectancy):'—'}</span></div>
+          </div>
+          <div class="bt-compare-col"><h4>WHEN ABSENT</h4>
+            <div class="m"><span>Trades</span><span>${cmp.absent.total||0}</span></div>
+            <div class="m"><span>Win Rate</span><span>${cmp.absent.total?bt_fmtPct(cmp.absent.winRate):'—'}</span></div>
+            <div class="m"><span>Avg R/trade</span><span>${cmp.absent.total?bt_fmtR(cmp.absent.expectancy):'—'}</span></div>
+          </div>
+        </div>`;
+        html += `<div class="bt-note" style="margin-top:10px;">This value appeared in ${cmp.pctOfWinners===null?'—':cmp.pctOfWinners.toFixed(1)+'%'} of winning trades, and ${cmp.pctOfLosers===null?'—':cmp.pctOfLosers.toFixed(1)+'%'} of losing trades.</div>`;
+      }
+    }
+    html += '</div>';
+
+    // Trade list
+    html += `<div class="bt-card"><h3>Trade Log</h3>`;
+    if (filteredTrades.length === 0) {
+      html += '<div class="bt-note">No trades in this category yet.</div>';
+    } else {
+      filteredTrades.slice().reverse().forEach(t => {
+        const rClass = t.resultR > 0 ? 'r-pos' : (t.resultR < 0 ? 'r-neg' : 'r-zero');
+        html += `<div class="bt-trade-row" style="cursor:pointer;flex-direction:column;align-items:stretch;" onclick="bt_toggleTradeExpand('${t.id}')">
+          <div style="display:flex;justify-content:space-between;">
+            <span>#${t.num} · ${bt_esc(t.date)} · ${t.direction==='long'?'Long':'Short'}</span>
+            <span class="${rClass}">${bt_fmtR(t.resultR)}</span>
+          </div>`;
+        if (t.expanded) {
+          html += `<div class="bt-edit-panel" onclick="event.stopPropagation()">
+            <label class="bt-field-label">Result (R)</label><input class="bt-input" type="number" step="0.1" value="${t.resultR}" onchange="bt_updateTradeField('${t.id}','resultR',this.value)">
+            <label class="bt-field-label">Direction</label>
+            <div class="bt-pill-row">
+              <button class="bt-pill ${t.direction==='long'?'on':''}" onclick="bt_updateTradeField('${t.id}','direction','long'); bt_render();">Long</button>
+              <button class="bt-pill ${t.direction==='short'?'on':''}" onclick="bt_updateTradeField('${t.id}','direction','short'); bt_render();">Short</button>
+            </div>
+            <label class="bt-field-label">Data type</label>
+            <div class="bt-pill-row">
+              <button class="bt-pill ${t.dataType==='in-sample'?'on':''}" onclick="bt_updateTradeField('${t.id}','dataType','in-sample'); bt_render();">In-Sample</button>
+              <button class="bt-pill ${t.dataType==='out-of-sample'?'on':''}" onclick="bt_updateTradeField('${t.id}','dataType','out-of-sample'); bt_render();">Out-of-Sample</button>
+              <button class="bt-pill ${t.dataType==='forward-test'?'on':''}" onclick="bt_updateTradeField('${t.id}','dataType','forward-test'); bt_render();">Forward Test</button>
+            </div>
+            <label class="bt-field-label">Market environment</label>
+            <div class="bt-pill-row">
+              <button class="bt-pill ${t.marketEnv==='Trending'?'on':''}" onclick="bt_updateTradeField('${t.id}','marketEnv','Trending'); bt_render();">Trending</button>
+              <button class="bt-pill ${t.marketEnv==='Ranging'?'on':''}" onclick="bt_updateTradeField('${t.id}','marketEnv','Ranging'); bt_render();">Ranging</button>
+              <button class="bt-pill ${t.marketEnv==='Unclear'?'on':''}" onclick="bt_updateTradeField('${t.id}','marketEnv','Unclear'); bt_render();">Unclear</button>
+            </div>
+            <label class="bt-field-label">Volatility</label>
+            <div class="bt-pill-row">
+              <button class="bt-pill ${t.volatility==='High'?'on':''}" onclick="bt_updateTradeField('${t.id}','volatility','High'); bt_render();">High</button>
+              <button class="bt-pill ${t.volatility==='Medium'?'on':''}" onclick="bt_updateTradeField('${t.id}','volatility','Medium'); bt_render();">Medium</button>
+              <button class="bt-pill ${t.volatility==='Low'?'on':''}" onclick="bt_updateTradeField('${t.id}','volatility','Low'); bt_render();">Low</button>
+            </div>
+            <label class="bt-field-label">Session</label><input class="bt-input" value="${bt_esc(t.session)}" placeholder="e.g. London" onchange="bt_updateTradeField('${t.id}','session',this.value)">
+            <label class="bt-field-label">Setup type</label><input class="bt-input" value="${bt_esc(t.setupType)}" placeholder="e.g. Breakout retest" onchange="bt_updateTradeField('${t.id}','setupType',this.value)">
+            <label class="bt-field-label">Notes</label><textarea class="bt-textarea" onchange="bt_updateTradeField('${t.id}','notes',this.value)">${bt_esc(t.notes)}</textarea>
+            <button class="bt-btn-danger" style="width:100%;padding:8px;border:none;border-radius:8px;margin-top:6px;" onclick="bt_deleteTrade('${t.id}')">Delete Trade</button>
+          </div>`;
+        }
+        html += `</div>`;
+      });
+    }
+    html += '</div>';
+
+    // ============ LIVE TRADING JOURNAL ============
+    if (!ver.liveTrades) ver.liveTrades = [];
+    if (ver.liveTrades.length > 0) {
+      html += `<div class="bt-warn">This version has live trade history. Changing the rulebook above may make future backtest-vs-live comparisons harder to interpret.</div>`;
+    }
+
+    html += `<div class="bt-card"><h3>Log a Live Trade</h3>`;
+    html += `<label class="bt-field-label">Date</label><input class="bt-input" type="date" id="btLiveTradeDate" value="${new Date().toISOString().slice(0,10)}">`;
+    html += `<label class="bt-field-label">Direction</label><div class="bt-pill-row">
+      <button class="bt-pill ${btState.liveTempDir==='long'?'on':''}" onclick="bt_setLiveTempDir('long')">Long</button>
+      <button class="bt-pill ${btState.liveTempDir==='short'?'on':''}" onclick="bt_setLiveTempDir('short')">Short</button>
+    </div>`;
+    html += `<label class="bt-field-label">Did you follow your strategy rules on this trade?</label><div class="bt-pill-row">
+      <button class="bt-pill ${btState.liveTempFollowed==='yes'?'on':''}" onclick="bt_setLiveTempFollowed('yes')">Yes</button>
+      <button class="bt-pill ${btState.liveTempFollowed==='no'?'on':''}" onclick="bt_setLiveTempFollowed('no')">No</button>
+    </div>`;
+    html += `<div class="bt-row-btns">
+      <button class="bt-btn-primary" onclick="bt_logLiveTrade(1)">WIN (+1R)</button>
+      <button class="bt-btn-danger" onclick="bt_logLiveTrade(-1)">LOSS (-1R)</button>
+      <button onclick="bt_logLiveTrade(0)">BE (0R)</button>
+    </div>`;
+    html += `<label class="bt-field-label" style="margin-top:10px;">Or log a custom R result</label>
+      <div style="display:flex;gap:8px;">
+        <input class="bt-input" style="margin-bottom:0;" type="number" step="0.1" id="btLiveCustomR" placeholder="e.g. 2.5 or -0.5">
+        <button class="bt-btn-primary" style="padding:0 16px;border:none;border-radius:8px;" onclick="bt_logLiveCustomR()">Log</button>
+      </div>`;
+    html += `<div class="bt-note" style="margin-top:10px;">Result = performance. "Followed rules" = process. A loss with rules followed can still be good trading — a win with rules broken isn't automatically good trading.</div>`;
+    html += '</div>';
+
+    // Compliance score
+    const compToday = bt_complianceScore(ver.liveTrades, 1);
+    const compWeek = bt_complianceScore(ver.liveTrades, 7);
+    const compMonth = bt_complianceScore(ver.liveTrades, 30);
+    const compAll = bt_complianceScore(ver.liveTrades, null);
+    html += `<div class="bt-card"><h3>Strategy Compliance</h3>`;
+    html += `<div class="bt-metric-grid">
+      <div class="bt-metric-box"><div class="v">${compToday===null?'—':compToday.toFixed(0)+'%'}</div><div class="l">Today</div></div>
+      <div class="bt-metric-box"><div class="v">${compWeek===null?'—':compWeek.toFixed(0)+'%'}</div><div class="l">This Week</div></div>
+      <div class="bt-metric-box"><div class="v">${compMonth===null?'—':compMonth.toFixed(0)+'%'}</div><div class="l">This Month</div></div>
+      <div class="bt-metric-box"><div class="v">${compAll===null?'—':compAll.toFixed(0)+'%'}</div><div class="l">All Time</div></div>
+    </div>`;
+    html += '</div>';
+
+    // Backtest vs Live comparison
+    const backtestMetrics = bt_computeMetrics(ver.trades);
+    const liveMetrics = bt_computeMetrics(ver.liveTrades);
+    html += `<div class="bt-card"><h3>Backtest vs Live</h3>`;
+    if (backtestMetrics.total === 0 || liveMetrics.total === 0) {
+      html += '<div class="bt-note">Need both backtest and live trades logged on this version to compare.</div>';
+    } else {
+      html += `<div class="bt-compare-cols">
+        <div class="bt-compare-col"><h4>BACKTEST</h4>
+          <div class="m"><span>Trades</span><span>${backtestMetrics.total}</span></div>
+          <div class="m"><span>Win Rate</span><span>${bt_fmtPct(backtestMetrics.winRate)}</span></div>
+          <div class="m"><span>Expectancy</span><span>${bt_fmtR(backtestMetrics.expectancy)}</span></div>
+          <div class="m"><span>Max DD</span><span>${bt_fmtR(backtestMetrics.maxDD)}</span></div>
+        </div>
+        <div class="bt-compare-col"><h4>LIVE</h4>
+          <div class="m"><span>Trades</span><span>${liveMetrics.total}</span></div>
+          <div class="m"><span>Win Rate</span><span>${bt_fmtPct(liveMetrics.winRate)}</span></div>
+          <div class="m"><span>Expectancy</span><span>${bt_fmtR(liveMetrics.expectancy)}</span></div>
+          <div class="m"><span>Max DD</span><span>${bt_fmtR(liveMetrics.maxDD)}</span></div>
+        </div>
+      </div>`;
+      html += `<div class="bt-note" style="margin-top:10px;">Difference in expectancy: ${bt_fmtR(liveMetrics.expectancy - backtestMetrics.expectancy)} per trade.</div>`;
+      if (liveMetrics.total < 20) {
+        html += `<div class="bt-note">Live sample size is still small (${liveMetrics.total} trades). Differences may be due to normal variation, not a real change in the strategy.</div>`;
+      }
+    }
+    html += '</div>';
+
+    // Execution gap analysis
+    const rulesFollowedTrades = ver.liveTrades.filter(t => t.rulesFollowed === 'yes');
+    const rulesBrokenTrades = ver.liveTrades.filter(t => t.rulesFollowed === 'no');
+    const followedM = bt_computeMetrics(rulesFollowedTrades);
+    const brokenM = bt_computeMetrics(rulesBrokenTrades);
+    html += `<div class="bt-card"><h3>Execution Gap</h3>`;
+    html += `<div class="bt-note">Is live performance worse because the strategy changed, or because execution slipped? Compare live results when rules were followed vs when they were broken.</div>`;
+    if (ver.liveTrades.length === 0) {
+      html += '<div class="bt-note">No live trades logged yet.</div>';
+    } else {
+      html += `<div class="bt-compare-cols">
+        <div class="bt-compare-col"><h4>RULES FOLLOWED</h4>
+          <div class="m"><span>Trades</span><span>${followedM.total||0}</span></div>
+          <div class="m"><span>Expectancy</span><span>${followedM.total?bt_fmtR(followedM.expectancy):'—'}</span></div>
+        </div>
+        <div class="bt-compare-col"><h4>RULES BROKEN</h4>
+          <div class="m"><span>Trades</span><span>${brokenM.total||0}</span></div>
+          <div class="m"><span>Expectancy</span><span>${brokenM.total?bt_fmtR(brokenM.expectancy):'—'}</span></div>
+        </div>
+      </div>`;
+      if (followedM.total < 10 || brokenM.total < 10) {
+        html += `<div class="bt-note" style="margin-top:10px;">Sample size is small on one or both sides — treat this as a early signal, not a firm conclusion yet.</div>`;
+      }
+    }
+    html += '</div>';
+
+    // Live trade log
+    html += `<div class="bt-card"><h3>Live Trade Journal Log</h3>`;
+    html += `<button class="bt-row-btns" style="width:100%;padding:8px;border:none;border-radius:8px;margin-bottom:10px;background:#333;color:white;" onclick="bt_exportLiveCSV()">Export Live Journal (CSV)</button>`;
+    if (ver.liveTrades.length === 0) {
+      html += '<div class="bt-note">No live trades yet.</div>';
+    } else {
+      ver.liveTrades.slice().reverse().forEach(t => {
+        const rClass = t.resultR > 0 ? 'r-pos' : (t.resultR < 0 ? 'r-neg' : 'r-zero');
+        html += `<div class="bt-trade-row" style="cursor:pointer;flex-direction:column;align-items:stretch;" onclick="bt_toggleLiveTradeExpand('${t.id}')">
+          <div style="display:flex;justify-content:space-between;">
+            <span>#${t.num} · ${bt_esc(t.date)} · ${t.direction==='long'?'Long':'Short'} · Rules: ${t.rulesFollowed==='yes'?'✓':'✗'}</span>
+            <span class="${rClass}">${bt_fmtR(t.resultR)}</span>
+          </div>`;
+        if (t.expanded) {
+          html += `<div class="bt-edit-panel" onclick="event.stopPropagation()">
+            <label class="bt-field-label">Result (R)</label><input class="bt-input" type="number" step="0.1" value="${t.resultR}" onchange="bt_updateLiveTradeField('${t.id}','resultR',this.value)">
+            <label class="bt-field-label">Followed strategy rules?</label>
+            <div class="bt-pill-row">
+              <button class="bt-pill ${t.rulesFollowed==='yes'?'on':''}" onclick="bt_updateLiveTradeField('${t.id}','rulesFollowed','yes'); bt_render();">Yes</button>
+              <button class="bt-pill ${t.rulesFollowed==='no'?'on':''}" onclick="bt_updateLiveTradeField('${t.id}','rulesFollowed','no'); bt_render();">No</button>
+            </div>
+            <label class="bt-field-label">Followed risk rules?</label>
+            <div class="bt-pill-row">
+              <button class="bt-pill ${t.riskRulesFollowed==='yes'?'on':''}" onclick="bt_updateLiveTradeField('${t.id}','riskRulesFollowed','yes'); bt_render();">Yes</button>
+              <button class="bt-pill ${t.riskRulesFollowed==='no'?'on':''}" onclick="bt_updateLiveTradeField('${t.id}','riskRulesFollowed','no'); bt_render();">No</button>
+            </div>
+            <label class="bt-field-label">Exited according to plan?</label>
+            <div class="bt-pill-row">
+              <button class="bt-pill ${t.exitedPerPlan==='yes'?'on':''}" onclick="bt_updateLiveTradeField('${t.id}','exitedPerPlan','yes'); bt_render();">Yes</button>
+              <button class="bt-pill ${t.exitedPerPlan==='no'?'on':''}" onclick="bt_updateLiveTradeField('${t.id}','exitedPerPlan','no'); bt_render();">No</button>
+            </div>
+            <label class="bt-field-label">Before: context / market conditions</label><textarea class="bt-textarea" onchange="bt_updateLiveTradeField('${t.id}','contextBefore',this.value)">${bt_esc(t.contextBefore)}</textarea>
+            <label class="bt-field-label">During: changes made / mistakes / events</label><textarea class="bt-textarea" onchange="bt_updateLiveTradeField('${t.id}','mistakes',this.value)">${bt_esc(t.mistakes)}</textarea>
+            <label class="bt-field-label">What went well</label><textarea class="bt-textarea" onchange="bt_updateLiveTradeField('${t.id}','wentWell',this.value)">${bt_esc(t.wentWell)}</textarea>
+            <label class="bt-field-label">What went badly</label><textarea class="bt-textarea" onchange="bt_updateLiveTradeField('${t.id}','wentBadly',this.value)">${bt_esc(t.wentBadly)}</textarea>
+            <label class="bt-field-label">What you learned</label><textarea class="bt-textarea" onchange="bt_updateLiveTradeField('${t.id}','learned',this.value)">${bt_esc(t.learned)}</textarea>
+            <button class="bt-btn-danger" style="width:100%;padding:8px;border:none;border-radius:8px;margin-top:6px;" onclick="bt_deleteLiveTrade('${t.id}')">Delete Live Trade</button>
+          </div>`;
+        }
+        html += `</div>`;
+      });
+    }
+    html += '</div>';
+
+    return html;
+  }
+
+  // ============ INIT ============
+  counter_render();
+  odds_render();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
