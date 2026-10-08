@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Wire Desk — News Briefing</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12151B">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #12151B;
+    --card: #1B1F29;
+    --card-border: #2A2F3B;
+    --ng: #3E9C7B;
+    --ng-dim: #245943;
+    --gl: #5B85C4;
+    --gl-dim: #2E4568;
+    --text: #E8E6DF;
+    --muted: #8B8F99;
+    --stale-fresh: #3E9C7B;
+    --stale-warn: #C99A3E;
+    --stale-old: #C25B4A;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    padding-bottom: 3rem;
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 1.75rem 1.25rem 1.25rem;
+    border-bottom: 1px solid var(--card-border);
+    position: sticky;
+    top: 0;
+    background: rgba(18, 21, 27, 0.92);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+
+  .eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.7rem;
+    margin: 0 0 0.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .freshness {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--card-border);
+    color: var(--muted);
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--stale-fresh);
+    box-shadow: 0 0 0 rgba(62,156,123,0.6);
+    animation: pulse 2.4s infinite;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(62,156,123,0.5); }
+    70% { box-shadow: 0 0 0 7px rgba(62,156,123,0); }
+    100% { box-shadow: 0 0 0 0 rgba(62,156,123,0); }
+  }
+
+  main { padding: 1.25rem; max-width: 640px; margin: 0 auto; }
+
+  .section-label {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 1.15rem;
+    margin: 2rem 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .section-label.nigeria { color: var(--ng); }
+  .section-label.global { color: var(--gl); }
+
+  .section-label::before {
+    content: '';
+    width: 22px;
+    height: 2px;
+    background: currentColor;
+  }
+
+  .story {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--rail, var(--gl));
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.85rem;
+    white-space: pre-wrap;
+    font-size: 0.86rem;
+    line-height: 1.55;
+  }
+
+  .story.nigeria { --rail: var(--ng); }
+  .story.global { --rail: var(--gl); }
+
+  .raw-fallback {
+    white-space: pre-wrap;
+    font-size: 0.86rem;
+    line-height: 1.6;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    padding: 1.1rem;
+  }
+
+  .empty, .error {
+    text-align: center;
+    color: var(--muted);
+    padding: 3rem 1rem;
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+
+  .error { color: var(--stale-old); }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.7rem;
+    padding: 2rem 1rem 0;
+    letter-spacing: 0.05em;
+  }
+
+  .refresh-btn {
+    display: block;
+    margin: 1.5rem auto 0;
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .refresh-btn:active { background: var(--card); }
+  .refresh-btn:focus-visible { outline: 2px solid var(--gl); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dot { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Wire Desk</div>
+  <h1>News Briefing</h1>
+  <div class="freshness" id="freshness">
+    <span class="dot" id="dot"></span>
+    <span id="freshness-text">Loading…</span>
+  </div>
+</header>
+
+<main id="main">
+  <div class="empty">Fetching latest briefing…</div>
+</main>
+
+<footer>WIRE DESK · REFRESHES EVERY 12H</footer>
+
+<script>
+  const DATA_URL = 'summary.json'; // same repo, relative path
+
+  async function loadBriefing() {
+    const main = document.getElementById('main');
+    try {
+      const res = await fetch(DATA_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error('not found');
+      const data = await res.json();
+      render(data);
+    } catch (e) {
+      main.innerHTML = `
+        <div class="error">
+          No briefing found yet.<br>
+          Run the bot on your PC once it's set up — this page updates automatically after that.
+        </div>
+        <button class="refresh-btn" onclick="loadBriefing()">Try again</button>
+      `;
+      document.getElementById('freshness-text').textContent = 'No data';
+      document.getElementById('dot').style.background = 'var(--stale-old)';
+    }
+  }
+
+  function render(data) {
+    const main = document.getElementById('main');
+    const updated = new Date(data.updated_at);
+    const hoursAgo = (Date.now() - updated.getTime()) / 36e5;
+
+    // Freshness indicator
+    const dot = document.getElementById('dot');
+    const freshnessText = document.getElementById('freshness-text');
+    let stateColor = 'var(--stale-fresh)';
+    let label = `Updated ${formatAgo(hoursAgo)}`;
+    if (hoursAgo > 14) { stateColor = 'var(--stale-old)'; }
+    else if (hoursAgo > 12) { stateColor = 'var(--stale-warn)'; }
+    dot.style.background = stateColor;
+    freshnessText.textContent = label;
+    freshnessText.style.color = stateColor;
+
+    // Content — if the bot gave us structured sections, render them nicely.
+    // Otherwise just show the raw summary text as a fallback.
+    if (data.nigeria || data.global) {
+      let html = '';
+      if (data.nigeria && data.nigeria.length) {
+        html += `<div class="section-label nigeria">Nigeria</div>`;
+        html += data.nigeria.map(s => `<div class="story nigeria">${escapeHtml(s)}</div>`).join('');
+      }
+      if (data.global && data.global.length) {
+        html += `<div class="section-label global">Global</div>`;
+        html += data.global.map(s => `<div class="story global">${escapeHtml(s)}</div>`).join('');
+      }
+      main.innerHTML = html || `<div class="empty">No stories in the latest run.</div>`;
+    } else if (data.summary) {
+      main.innerHTML = `<div class="raw-fallback">${escapeHtml(data.summary)}</div>`;
+    } else {
+      main.innerHTML = `<div class="empty">Briefing file found but empty.</div>`;
+    }
+
+    main.innerHTML += `<button class="refresh-btn" onclick="loadBriefing()">Refresh</button>`;
+  }
+
+  function formatAgo(hours) {
+    if (hours < 1) return `${Math.round(hours * 60)}m ago`;
+    return `${hours.toFixed(1)}h ago`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  loadBriefing();
+</script>
+
+</body>
+</html>
